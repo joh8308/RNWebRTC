@@ -1,6 +1,6 @@
 'use strict';
 
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import {
   AppRegistry,
   StyleSheet,
@@ -15,7 +15,7 @@ import {
 /* screen */
 import Login from './screen/login';
 import Buddy from './screen/buddy';
-
+import firebase from 'firebase';
 import io from 'socket.io-client';
 
 const socket = io.connect('https://react-native-webrtc.herokuapp.com', {transports: ['websocket']});
@@ -29,6 +29,8 @@ import {
   MediaStreamTrack,
   getUserMedia,
 } from 'react-native-webrtc';
+import CallScreen from "./screen/callScreen";
+import Calling from './screen/calling';
 
 const configuration = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
 
@@ -47,7 +49,7 @@ function getLocalStream(isFront, callback) {
 
       for (let i = 0; i < sourceInfos.length; i++) {
         const sourceInfo = sourceInfos[i];
-        if(sourceInfo.kind == "video" && sourceInfo.facing == (isFront ? "front" : "back")) {
+        if (sourceInfo.kind == "video" && sourceInfo.facing == (isFront ? "front" : "back")) {
           videoSourceId = sourceInfo.id;
         }
       }
@@ -71,7 +73,7 @@ function getLocalStream(isFront, callback) {
 }
 
 function join(roomID) {
-  socket.emit('join', roomID, function(socketIds){
+  socket.emit('join', roomID, function (socketIds) {
     console.log('join', socketIds);
     for (const i in socketIds) {
       const socketId = socketIds[i];
@@ -87,16 +89,16 @@ function createPC(socketId, isOffer) {
   pc.onicecandidate = function (event) {
     console.log('onicecandidate', event.candidate);
     if (event.candidate) {
-      socket.emit('exchange', {'to': socketId, 'candidate': event.candidate });
+      socket.emit('exchange', {'to': socketId, 'candidate': event.candidate});
     }
   };
 
   function createOffer() {
-    pc.createOffer(function(desc) {
+    pc.createOffer(function (desc) {
       console.log('createOffer', desc);
       pc.setLocalDescription(desc, function () {
         console.log('setLocalDescription', pc.localDescription);
-        socket.emit('exchange', {'to': socketId, 'sdp': pc.localDescription });
+        socket.emit('exchange', {'to': socketId, 'sdp': pc.localDescription});
       }, logError);
     }, logError);
   }
@@ -108,7 +110,7 @@ function createPC(socketId, isOffer) {
     }
   }
 
-  pc.oniceconnectionstatechange = function(event) {
+  pc.oniceconnectionstatechange = function (event) {
     console.log('oniceconnectionstatechange', event.target.iceConnectionState);
     if (event.target.iceConnectionState === 'completed') {
       setTimeout(() => {
@@ -119,7 +121,7 @@ function createPC(socketId, isOffer) {
       createDataChannel();
     }
   };
-  pc.onsignalingstatechange = function(event) {
+  pc.onsignalingstatechange = function (event) {
     console.log('onsignalingstatechange', event.target.signalingState);
   };
 
@@ -129,7 +131,7 @@ function createPC(socketId, isOffer) {
 
     const remoteList = container.state.remoteList;
     remoteList[socketId] = event.stream.toURL();
-    container.setState({ remoteList: remoteList });
+    container.setState({remoteList: remoteList});
   };
   pc.onremovestream = function (event) {
     console.log('onremovestream', event.stream);
@@ -162,6 +164,7 @@ function createPC(socketId, isOffer) {
 
     pc.textDataChannel = dataChannel;
   }
+
   return pc;
 }
 
@@ -178,11 +181,11 @@ function exchange(data) {
     console.log('exchange sdp', data);
     pc.setRemoteDescription(new RTCSessionDescription(data.sdp), function () {
       if (pc.remoteDescription.type == "offer")
-        pc.createAnswer(function(desc) {
+        pc.createAnswer(function (desc) {
           console.log('createAnswer', desc);
           pc.setLocalDescription(desc, function () {
             console.log('setLocalDescription', pc.localDescription);
-            socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription });
+            socket.emit('exchange', {'to': fromId, 'sdp': pc.localDescription});
           }, logError);
         }, logError);
     }, logError);
@@ -201,20 +204,20 @@ function leave(socketId) {
 
   const remoteList = container.state.remoteList;
   delete remoteList[socketId]
-  container.setState({ remoteList: remoteList });
+  container.setState({remoteList: remoteList});
   container.setState({info: 'One peer leave!'});
 }
 
-socket.on('exchange', function(data){
+socket.on('exchange', function (data) {
   exchange(data);
 });
-socket.on('leave', function(socketId){
+socket.on('leave', function (socketId) {
   leave(socketId);
 });
 
-socket.on('connect', function(data) {
+socket.on('connect', function (data) {
   console.log('connect');
-  getLocalStream(true, function(stream) {
+  getLocalStream(true, function (stream) {
     localStream = stream;
     container.setState({selfViewSrc: stream.toURL()});
     container.setState({status: 'ready', info: 'Please enter or create room ID'});
@@ -239,7 +242,7 @@ function getStats() {
   if (pc.getRemoteStreams()[0] && pc.getRemoteStreams()[0].getAudioTracks()[0]) {
     const track = pc.getRemoteStreams()[0].getAudioTracks()[0];
     console.log('track', track);
-    pc.getStats(track, function(report) {
+    pc.getStats(track, function (report) {
       console.log('getStats report', report);
     }, logError);
   }
@@ -248,10 +251,10 @@ function getStats() {
 let container;
 
 const RCTWebRTCDemo = React.createClass({
-  getInitialState: function() {
+  getInitialState: function () {
     this.ds = new ListView.DataSource({rowHasChanged: (r1, r2) => true});
     return {
-      screen: 'list',
+      screen: 'login',
       user: '',
       info: 'Initializing',
       status: 'init',
@@ -264,7 +267,7 @@ const RCTWebRTCDemo = React.createClass({
       textRoomValue: '',
     };
   },
-  componentDidMount: function() {
+  componentDidMount: function () {
     container = this;
   },
   _press(event) {
@@ -275,7 +278,7 @@ const RCTWebRTCDemo = React.createClass({
   _switchVideoType() {
     const isFront = !this.state.isFront;
     this.setState({isFront});
-    getLocalStream(isFront, function(stream) {
+    getLocalStream(isFront, function (stream) {
       if (localStream) {
         for (const id in pcPeers) {
           const pc = pcPeers[id];
@@ -315,7 +318,7 @@ const RCTWebRTCDemo = React.createClass({
         <ListView
           dataSource={this.ds.cloneWithRows(this.state.textRoomData)}
           renderRow={rowData => <Text>{`${rowData.user}: ${rowData.message}`}</Text>}
-          />
+        />
         <TextInput
           style={{width: 200, height: 30, borderColor: 'gray', borderWidth: 1}}
           onChangeText={value => this.setState({textRoomValue: value})}
@@ -334,52 +337,64 @@ const RCTWebRTCDemo = React.createClass({
   },
 
   render() {
-    if(this.state.screen === 'login') {
-      return <Login changeScreen={this.changeScreen} />
+    if (this.state.screen === 'login') {
+      return <Login changeScreen={this.changeScreen}/>
     }
 
-    else if(this.state.screen === 'list') {
-      return <Buddy changeScreen={this.changeScreen} />
+    else if (this.state.screen === 'list') {
+      return <Buddy changeScreen={this.changeScreen} user={this.state.user} />
+    }
+
+    else if(this.state.screen === 'calling') {
+      return <Calling changeScreen={this.changeScreen} user={this.state.user} />
     }
 
     else {
+      if (!this.state.joinStatus) {
+        this.setState({joinStatus: true})
+        join('john');
+      }
+
       return (
-        <View style={styles.container}>
-          <Text style={styles.welcome}>
-            {this.state.info}
-          </Text>
-          {this.state.textRoomConnected && this._renderTextRoom()}
-          <View style={{flexDirection: 'row'}}>
-            <Text>
-              {this.state.isFront ? "Use front camera" : "Use back camera"}
+        <View>
+          <CallScreen user={this.state.user}/>
+          <View style={[styles.container, {height: 0}]}>
+            <Text style={styles.welcome}>
+              {this.state.info}
             </Text>
-            <TouchableHighlight
-              style={{borderWidth: 1, borderColor: 'black'}}
-              onPress={this._switchVideoType}>
-              <Text>Switch camera</Text>
-            </TouchableHighlight>
-          </View>
-          { this.state.status == 'ready' ?
-            (<View>
-              <TextInput
-                ref='roomID'
-                autoCorrect={false}
-                style={{width: 200, height: 40, borderColor: 'gray', borderWidth: 1}}
-                onChangeText={(text) => this.setState({roomID: text})}
-                value={this.state.roomID}
-              />
+            {this.state.textRoomConnected && this._renderTextRoom()}
+            <View style={{flexDirection: 'row'}}>
+              <Text>
+                {this.state.isFront ? "Use front camera" : "Use back camera"}
+              </Text>
               <TouchableHighlight
-                onPress={this._press}>
-                <Text>Enter room</Text>
+                style={{borderWidth: 1, borderColor: 'black'}}
+                onPress={this._switchVideoType}>
+                <Text>Switch camera</Text>
               </TouchableHighlight>
-            </View>) : null
-          }
-          <RTCView streamURL={this.state.selfViewSrc} style={styles.selfView}/>
-          {
-            mapHash(this.state.remoteList, function(remote, index) {
-              return <RTCView key={index} streamURL={remote} style={styles.remoteView}/>
-            })
-          }
+            </View>
+            { this.state.status == 'ready' ?
+              (<View>
+                <TextInput
+                  ref='roomID'
+                  autoCorrect={false}
+                  style={{width: 200, height: 40, borderColor: 'gray', borderWidth: 1}}
+                  onChangeText={(text) => this.setState({roomID: text})}
+                  value={this.state.roomID}
+                />
+                <TouchableHighlight
+                  onPress={this._press}>
+                  <Text>Enter room</Text>
+                </TouchableHighlight>
+              </View>) : null
+            }
+            <RTCView streamURL={this.state.selfViewSrc} style={styles.selfView}/>
+            {
+              mapHash(this.state.remoteList, function (remote, index) {
+                return <RTCView key={index} streamURL={remote} style={styles.remoteView}/>
+              })
+            }
+          </View>
         </View>
       );
     }

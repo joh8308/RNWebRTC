@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import {
   Text,
   View,
@@ -8,22 +8,46 @@ import {
   Dimensions,
   Platform
 } from 'react-native';
+import firebase from 'firebase';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 export default class ChatRoomItem extends Component {
+  createCallRoom = (toUid, fromUid) => {
+    const callRef = firebase.database().ref('calls');
+    const pushRef = callRef.push();
+    const key = pushRef.getKey();
+    firebase.database().ref('calls').set({
+      caller: fromUid,
+      createdAt: firebase.database.ServerValue.TIMESTAMP
+    })
+      .then(() => {
+        firebase.database().ref(`users/${toUid}/callRoom/${key}`).set("caller")
+          .catch((error) => reject(error))
+      })
+      .then(() => {
+        firebase.database().ref(`users/${fromUid}/callRoom/${key}`).set("callee")
+          .catch((error) => reject(error))
+      })
+  }
+
+  pressItem = () => {
+    // this.createCallRoom('1234','4321');
+    this.props.onPress(this.props.targetId);
+  };
+
   render() {
-    let containerAppendedBG = this.props.backgroundColor ? { backgroundColor: this.props.backgroundColor } : null;
+    let containerAppendedBG = this.props.backgroundColor ? {backgroundColor: this.props.backgroundColor} : null;
     return (
       <TouchableOpacity
-        onPress={() => this.props.onPress(this.props.targetId)}>
-        <View style={[styles.container, containerAppendedBG, { height: 65 }]}>
+        onPress={() => this.pressItem()}>
+        <View style={[styles.container, containerAppendedBG, {height: 65}]}>
           {/*컨텐츠*/}
-          <View style={[styles.contArea, { flex: 1 }]}>
+          <View style={[styles.contArea, {flex: 1}]}>
             <View style={styles.contTouch}>
               {/*이미지*/}
               <Image
-                style={[styles.profImg, { height: 50, width: 50, borderRadius: 25 }]}
+                style={[styles.profImg, {height: 50, width: 50, borderRadius: 25}]}
                 source={this.props.imgUri}
                 resizeMode={Image.resizeMode.cover}
               />
@@ -55,7 +79,7 @@ export default class ChatRoomItem extends Component {
             </View>
             :
             this.props.statusMsg !== '' && this.props.showStatusMsg &&
-            <View style={{ width: 150, height: 50 }}>
+            <View style={{width: 150, height: 50}}>
               <View
                 style={{
                   alignItems: 'flex-end',

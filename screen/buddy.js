@@ -10,17 +10,32 @@ import {
   Image,
   BackHandler,
   AppState,
-  AsyncStorage
+  AsyncStorage,
+  Alert
 } from 'react-native';
 
 import Header from './header';
 import ChatRoom from './chatRoom';
 
+/* user */
+const john = require('../res/image/john.png');
+const phantom = require('../res/image/yun.png');
+
 const width = Dimensions.get('window').width;
 
 export default class Buddy extends Component {
   callUser = () => {
-    console.log('call');
+    this.props.changeScreen('call', this.props.user);
+  };
+
+  notice = () => {
+    Alert.alert(
+      '알림',
+      '자기 자신과 통화할 수 없습니다',
+      [
+        {text: 'OK', onPress: () => console.log('OK Pressed')},
+      ]
+    );
   };
 
   render() {
@@ -34,12 +49,14 @@ export default class Buddy extends Component {
           }}/>
 
         <View>
-          <Text style={styles.sectionText}>내 프로필</Text>
+          <TouchableOpacity onPress={()=>this.props.changeScreen('calling', this.props.user)}>
+            <Text style={styles.sectionText}>내 프로필</Text>
+          </TouchableOpacity>
           <ChatRoom isStatic={true}
-                    imgUri={require('../res/image/john.png')}
-                    title={'john'}
+                    imgUri={this.props.user === 'john' ? john : phantom}
+                    title={this.props.user === 'john' ? 'john' : 'phantom'}
                     statusMsg={'mine'}
-                    onPress={() => this.callUser()}
+                    onPress={() => this.notice()}
                     showMoreBtn={false}
                     showStatusMsg={true}/>
 
@@ -47,8 +64,8 @@ export default class Buddy extends Component {
             style={styles.sectionText}>{'친구 (1)'}</Text>
           <ChatRoom
             isStatic={true}
-            imgUri={require('../res/image/yun.png')}
-            title={'phantom'}
+            imgUri={this.props.user === 'john' ? phantom : john}
+            title={this.props.user === 'john' ? 'phantom' : 'john'}
             statusMsg={'friends'}
             onPress={() => this.callUser()}
             showMoreBtn={false}
